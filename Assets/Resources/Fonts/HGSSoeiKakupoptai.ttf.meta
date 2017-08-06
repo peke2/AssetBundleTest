@@ -1,0 +1,21 @@
+fileFormatVersion: 2
+guid: 133e4908814e2cc4b9fb84d45c672632
+timeCreated: 1501900986
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: HGSSoeiKakupoptai
+  fontNames:
+  - HGSSoeiKakupoptai
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
