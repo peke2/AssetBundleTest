@@ -1,5 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 
 public class CreateAssetBundles
 {
@@ -16,8 +18,8 @@ public class CreateAssetBundles
 
         //string[] testNames = AssetDatabase.GetAssetPathsFromAssetBundleAndAssetName("dailog1", "dialog");
         //Debug.Log("確認["+testNames[0]+"]");
-        /*
-        string[] assetNames = new string[3];
+        
+        /*string[] assetNames = new string[3];
         buildMap[0].assetBundleName = "dialog_bundle";
         assetNames[0] = "Assets/Resources/Dialog1.prefab";
         assetNames[1] = "Assets/Resources/Dialog2.prefab";
@@ -26,7 +28,7 @@ public class CreateAssetBundles
         string[] assetNames = new string[1];
         buildMap[0].assetBundleName = "dialog_bundle";
         assetNames[0] = "Assets/Resources/Dialog3.prefab";
-
+        
         buildMap[0].assetNames = assetNames;
 
         //  確認用なので強制的にビルドするオプションを指定
@@ -36,6 +38,28 @@ public class CreateAssetBundles
     [MenuItem("Assets/Clear Cache")]
     static void ClearCache()
     {
-        Caching.CleanCache();
+        ClearCache();
     }
+
+	[MenuItem("Assets/Build Text Asset")]
+	static void BuidTextAsset()
+	{
+		string assetBundleDirectory = "Assets/AssetBundles";
+		//BuildPipeline.BuildAssetBundles(assetBundleDirectory, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+
+		var taDoc = Resources.Load<TextAsset>("Text/document");
+		var taInfo = Resources.Load<TextAsset>("Text/info");
+		TextAsset[] objs = new TextAsset[]{ taDoc, taInfo};
+		bool isSucceeded;
+		//isSucceeded = BuildPipeline.BuildAssetBundle(null, objs, "Assets/AssetBundles/text", BuildAssetBundleOptions.UncompressedAssetBundle, BuildTarget.StandaloneWindows);
+		isSucceeded = BuildPipeline.BuildAssetBundle(null, objs, "Assets/AssetBundles/text", BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+		Debug.Log("["+((isSucceeded==true)?"成功":"失敗")+ "]<-テキストアセットバンドル作成結果");
+
+		//	Json形式のテキストからアセットバンドルを作成
+		var jsonText = Resources.Load<TextAsset>("Json/info");
+		//var infoBase = JsonUtility.FromJson<InfoBase>(jsonText.text);
+		isSucceeded = BuildPipeline.BuildAssetBundle(null, new TextAsset[] { jsonText }, "Assets/AssetBundles/info", BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
+		Debug.Log("[" + ((isSucceeded == true) ? "成功" : "失敗") + "]<-情報アセットバンドル作成結果");
+	}
+
 }

@@ -15,6 +15,7 @@ ExportedObj/
 *.pidb
 *.booproj
 *.svd
+.vs
 
 *.log
 *.buildreport

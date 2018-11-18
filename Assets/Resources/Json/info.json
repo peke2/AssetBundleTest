@@ -1,0 +1,30 @@
+{
+  "version": "7",
+  "elements": [
+    {
+      "name": "apple",
+      "value": 145,
+      "comment": "red"
+    },
+    {
+      "name": "orange",
+      "value": 11,
+      "comment": "bye"
+    },
+    {
+      "name": "lemon",
+      "value": 3,
+      "comment": "hello"
+    },
+    {
+      "name": "pineapple",
+      "value": 7,
+      "comment": "pen"
+    },
+    {
+      "name": "grape",
+      "value": 1329,
+      "comment": "unknown"
+    }
+  ]
+}

@@ -17,7 +17,8 @@ public class Loader : MonoBehaviour {
     IEnumerator Load()
     {
         //WWW www = WWW.LoadFromCacheOrDownload("http://127.0.0.1:20080/share/resources/dialog_bundle", 1);
-        WWW www = new WWW("http://127.0.0.1:20080/share/resources/dialog_bundle");
+        //WWW www = new WWW("http://127.0.0.1:20080/dialog_bundle");
+        WWW www = new WWW("http://127.0.0.1:20080/share/dialog_bundle");
         yield return www;
 
         Object[] assets = www.assetBundle.LoadAllAssets();
