@@ -7,6 +7,15 @@ using System.IO;
 
 public class CreateAssetBundles
 {
+	static void prepareOutputDirectory(string assetBundleDirectory = "Assets/AssetBundles")
+	{
+		//	出力先が無ければ作成(gitで空のディレクトリが保持されないので最初に作る必要がある)
+		if (!Directory.Exists(assetBundleDirectory))
+		{
+			Directory.CreateDirectory(assetBundleDirectory);
+		}
+	}
+
 	[MenuItem ("Assets/Build AssetBundles")]
 	static void BuildAllAssetBundles()
 	{
@@ -46,12 +55,7 @@ public class CreateAssetBundles
 	[MenuItem("Assets/Build Text Asset")]
 	static void BuidTextAsset()
 	{
-		string assetBundleDirectory = "Assets/AssetBundles";
-		//	出力先が無ければ作成(gitで空のディレクトリが保持されないので最初に作る必要がある)
-		if (!Directory.Exists(assetBundleDirectory) )
-		{
-			Directory.CreateDirectory(assetBundleDirectory);
-		}
+		prepareOutputDirectory();
 
 		//BuildPipeline.BuildAssetBundles(assetBundleDirectory, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
 
