@@ -106,24 +106,18 @@ public class PrepareAssets : MonoBehaviour {
 
 		isLoading = true;
 
-		//	WWW.LoadFromCacheOrDownload() は obsolete なので置き換える
-		UnityWebRequest request = UnityWebRequestAssetBundle.GetAssetBundle(path, 0);
-		yield return request.SendWebRequest();
+		uint version = 3;	//[todo] 要確認 → 一度このバージョンで読み込んだ後、バージョンを上げると読み込みに失敗する？
+		using(var request = new UnityWebRequest(path, UnityWebRequest.kHttpVerbGET))
+		{
+			request.downloadHandler = new DownloadHandlerAssetBundle(path, version, 0);
+			yield return request.SendWebRequest();
+			AssetBundle assetBundle = DownloadHandlerAssetBundle.GetContent(request);
 
-		if (request.isNetworkError || request.isHttpError)
-		{
-			Debug.Log(request.error);
-		}
-		else
-		{
-			//複数回読み込んだ場合の「既にアセットがあるエラー」は、アセットバンドルの問題ではなく、
-			//同じアセットを複数保持することが出来ないだけだと思われる…
-			var assetBundle = DownloadHandlerAssetBundle.GetContent(request);
 			var textAsset = assetBundle.LoadAsset<TextAsset>("info");
 			var info = JsonUtility.FromJson<InfoBase>(textAsset.text);
 			Debug.Log("バージョン[" + info.version.ToString() + "]");
 			Debug.Log("取得済み情報数=" + info.elements.Length.ToString());
-			foreach (var elem in info.elements)
+			foreach(var elem in info.elements)
 			{
 				Debug.Log("name=[" + elem.name + "]");
 			}
