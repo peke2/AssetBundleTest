@@ -2,6 +2,8 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+
 
 public class CreateAssetBundles
 {
@@ -45,6 +47,12 @@ public class CreateAssetBundles
 	static void BuidTextAsset()
 	{
 		string assetBundleDirectory = "Assets/AssetBundles";
+		//	出力先が無ければ作成(gitで空のディレクトリが保持されないので最初に作る必要がある)
+		if (!Directory.Exists(assetBundleDirectory) )
+		{
+			Directory.CreateDirectory(assetBundleDirectory);
+		}
+
 		//BuildPipeline.BuildAssetBundles(assetBundleDirectory, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows);
 
 		var taDoc = Resources.Load<TextAsset>("Text/document");

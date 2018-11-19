@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 using System.IO;
 
 public class PrepareAssets : MonoBehaviour {
@@ -48,24 +49,18 @@ public class PrepareAssets : MonoBehaviour {
 		}
 
 
-		int version = 8;	//	このバージョンでキャッシュに残る？ → キャッシュに残るバージョンと同じ場合、キャッシュから読む
-		using(var www = WWW.LoadFromCacheOrDownload("http://127.0.0.1:24080/info", version))
+		int version = 8;    //	このバージョンでキャッシュに残る？ → キャッシュに残るバージョンと同じ場合、キャッシュから読む
+
+		UnityWebRequest request = UnityWebRequestAssetBundle.GetAssetBundle("http://127.0.0.1:24080/info", 0);
+		yield return request.Send();
+		var assetBundle = DownloadHandlerAssetBundle.GetContent(request);
+		var textAsset = assetBundle.LoadAsset<TextAsset>("info");
+		var info = JsonUtility.FromJson<InfoBase>(textAsset.text);
+		Debug.Log("バージョン[" + info.version.ToString() + "]");
+		Debug.Log("取得済み情報数=" + info.elements.Length.ToString());
+		foreach (var elem in info.elements)
 		{
-			yield return www;
-			if(!string.IsNullOrEmpty(www.error))
-			{
-				Debug.Log(www.error);
-				yield return null;
-			}
-			var assetBundle = www.assetBundle;
-			var textAsset = assetBundle.LoadAsset<TextAsset>("info");
-			var info = JsonUtility.FromJson<InfoBase>(textAsset.text);
-			Debug.Log("バージョン["+info.version.ToString()+"]");
-			Debug.Log("取得済み情報数="+info.elements.Length.ToString());
-			foreach(var elem in info.elements)
-			{
-				Debug.Log("name=["+elem.name+"]");
-			}
+			Debug.Log("name=[" + elem.name + "]");
 		}
 	}
 }
