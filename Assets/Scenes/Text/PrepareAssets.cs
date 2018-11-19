@@ -6,10 +6,13 @@ using System.IO;
 
 public class PrepareAssets : MonoBehaviour {
 
+	bool isLoading = false;
+
 	// Use this for initialization
 	void Start () {
 		//StartCoroutine(load());
 		StartCoroutine(loadFromWeb());
+		//StartCoroutine(loadMulti());	//	同じアセットバンドルを読み込んだ時のエラー挙動確認用
 	}
 
 	// Update is called once per frame
@@ -40,27 +43,47 @@ public class PrepareAssets : MonoBehaviour {
 		}
 	}
 
+	/**
+	 *	同じアセットを読み込んだ時に「既にアセットがある」エラーが出るので、同じアセットバンドルを複数回読み込んでみる 
+	 */
+	IEnumerator loadMulti()
+	{
+		int loadCount = 0;
+		do
+		{
+			yield return StartCoroutine(loadFromWeb());
+			if (isLoading) yield return null;
+			loadCount++;
+		} while (loadCount < 2);
+	}
+
 
 	IEnumerator loadFromWeb()
 	{
-		while(!Caching.ready)
-		{
-			yield return null;
-		}
+		isLoading = true;
 
-
-		int version = 8;    //	このバージョンでキャッシュに残る？ → キャッシュに残るバージョンと同じ場合、キャッシュから読む
-
+		//	WWW.LoadFromCacheOrDownload() は obsolete なので置き換える
 		UnityWebRequest request = UnityWebRequestAssetBundle.GetAssetBundle("http://127.0.0.1:24080/info", 0);
-		yield return request.Send();
-		var assetBundle = DownloadHandlerAssetBundle.GetContent(request);
-		var textAsset = assetBundle.LoadAsset<TextAsset>("info");
-		var info = JsonUtility.FromJson<InfoBase>(textAsset.text);
-		Debug.Log("バージョン[" + info.version.ToString() + "]");
-		Debug.Log("取得済み情報数=" + info.elements.Length.ToString());
-		foreach (var elem in info.elements)
+		yield return request.SendWebRequest();
+
+		if (request.isNetworkError || request.isHttpError)
 		{
-			Debug.Log("name=[" + elem.name + "]");
+			Debug.Log(request.error);
 		}
+		else
+		{
+			//複数回読み込んだ場合の「既にアセットがあるエラー」は、アセットバンドルの問題ではなく、
+			//同じアセットを複数保持することが出来ないだけだと思われる…
+			var assetBundle = DownloadHandlerAssetBundle.GetContent(request);
+			var textAsset = assetBundle.LoadAsset<TextAsset>("info");
+			var info = JsonUtility.FromJson<InfoBase>(textAsset.text);
+			Debug.Log("バージョン[" + info.version.ToString() + "]");
+			Debug.Log("取得済み情報数=" + info.elements.Length.ToString());
+			foreach (var elem in info.elements)
+			{
+				Debug.Log("name=[" + elem.name + "]");
+			}
+		}
+		isLoading = false;
 	}
 }
