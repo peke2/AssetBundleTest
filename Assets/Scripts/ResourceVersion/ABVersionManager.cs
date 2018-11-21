@@ -7,6 +7,7 @@ using System.IO;
 
 public class ABVersionManager : MonoBehaviour {
 
+	[Serializable]
 	public class MergedInfo{
 		public enum ResourceType{
 			LOCAL,
@@ -24,8 +25,25 @@ public class ABVersionManager : MonoBehaviour {
 	}
 
 
-	Dictionary<string, MergedInfo> versionInfos = new Dictionary<string, MergedInfo>();
+	Dictionary<string, MergedInfo> mergedVersionInfos = new Dictionary<string, MergedInfo>();
 
+	[Serializable]
+	public class CurrentVersionInfosContainer
+	{
+		public MergedInfo[] infos;
+
+		public CurrentVersionInfosContainer(Dictionary<string, MergedInfo> mergedInfos)
+		{
+			infos = new MergedInfo[mergedInfos.Count];
+
+			int count = 0;
+			foreach (var key in mergedInfos.Keys)
+			{
+				var info = mergedInfos[key];
+				infos[count++] = info;
+			}
+		}
+	}
 
 
 	void Awake()
@@ -52,7 +70,7 @@ public class ABVersionManager : MonoBehaviour {
 	void Start()
 	{
 		//StartCoroutine(loadVersionInfosFromRemote("http://127.0.0.1:24080/info.json"));
-		StartCoroutine(loadVersionInfos());
+		StartCoroutine(readVersionInfos());
 	}
 
 
@@ -71,17 +89,17 @@ public class ABVersionManager : MonoBehaviour {
 		{
 			string key = info.name;
 			//	バージョンが上の情報を残す
-			bool contains = versionInfos.ContainsKey(key);
-			if (!contains || (info.version > versionInfos[key].info.version))
+			bool contains = mergedVersionInfos.ContainsKey(key);
+			if (!contains || (info.version > mergedVersionInfos[key].info.version))
 			{
-				versionInfos[key] = new MergedInfo(info, type);
+				mergedVersionInfos[key] = new MergedInfo(info, type);
 			}
 		}
 	}
 
 	public Dictionary<string, MergedInfo> getFileVersionIfnos()
 	{
-		return versionInfos;
+		return mergedVersionInfos;
 	}
 
 
@@ -97,19 +115,22 @@ public class ABVersionManager : MonoBehaviour {
 
 	ABVersionInfo remoteVersionInfos;
 	ABVersionInfo localVersionInfos;
-	IEnumerator loadVersionInfos()
+	IEnumerator readVersionInfos()
 	{
 		remoteVersionInfos = null;
 		localVersionInfos = null;
 
-		yield return loadVersionInfosFromRemote("http://127.0.0.1:24080/info.json");
-		loadVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, "info.json"));
+		yield return readVersionInfosFromRemote("http://127.0.0.1:24080/info.json");
+		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, "info.json"));
 
 		addInfos(remoteVersionInfos.infos, MergedInfo.ResourceType.REMOTE);
 		addInfos(localVersionInfos.infos, MergedInfo.ResourceType.LOCAL);
+
+		yield return updateAssetBundles();
 	}
 
-	IEnumerator loadVersionInfosFromRemote(string url)
+
+	IEnumerator readVersionInfosFromRemote(string url)
 	{
 		UnityWebRequest request = UnityWebRequest.Get(url);
 		yield return request.SendWebRequest();
@@ -131,7 +152,7 @@ public class ABVersionManager : MonoBehaviour {
 		}
 	}
 
-	void loadVersionInfosFromLocal(string path)
+	void readVersionInfosFromLocal(string path)
 	{
 		if( !File.Exists(path) )
 		{
@@ -150,5 +171,84 @@ public class ABVersionManager : MonoBehaviour {
 		localVersionInfos = versionInfos;
 	}
 
+
+	IEnumerator updateAssetBundles()
+	{
+		string path = Path.Combine(Application.persistentDataPath, "current_version_infos.json");
+
+		Dictionary<string, MergedInfo> currentMergedInfo = readCurrentVersionInfos(path);
+
+		Dictionary<string, MergedInfo> updateTarget = retrieveUpdateTarget(mergedVersionInfos, currentMergedInfo);
+
+		//	更新前に一度削除
+		deleteCurrentVersionInfos(path);
+
+		//アセットバンドルの更新
+		yield return null;
+
+		//	更新後の情報で書き込み
+		writeCurrentVersionInfos(path, updateTarget);
+	}
+
+
+	Dictionary<string, MergedInfo> retrieveUpdateTarget(Dictionary<string, MergedInfo> newInfos, Dictionary<string, MergedInfo> currentInfos)
+	{
+		//	現在の情報が無ければ新規をそのまま使う
+		if( currentInfos == null )
+		{
+			return newInfos;
+		}
+
+		//差分の抽出
+		//新規
+		//バージョンが上
+		return newInfos;	//仮でそのまま返す
+	}
+
+
+
+	/// <summary>
+	/// 現在(読み込み済み)のバージョン情報を削除
+	/// </summary>
+	void deleteCurrentVersionInfos(string path)
+	{
+		if (!File.Exists(path)) return;
+		File.Delete(path);
+	}
+
+	/// <summary>
+	/// 現在(読み込み済み)のバージョン情報を書き込み
+	/// </summary>
+	Dictionary<string, MergedInfo> readCurrentVersionInfos(string path)
+	{
+		if( !File.Exists(path))
+		{
+			Debug.Log("ファイル["+path+"]が無いので読み込みをスキップ");
+			return null;
+		}
+
+		var jsonText = File.ReadAllText(path);
+		var container = JsonUtility.FromJson<CurrentVersionInfosContainer>(jsonText);
+
+		var mergedInfos = new Dictionary<string, MergedInfo>();
+		foreach(var info in container.infos)
+		{
+			mergedInfos[info.info.name] = info;
+		}
+		return mergedInfos;
+	}
+
+	/// <summary>
+	/// 現在(読み込み済み)のバージョン情報を書き込み
+	/// </summary>
+	void writeCurrentVersionInfos(string path, Dictionary<string, MergedInfo> mergedInfos)
+	{
+		var container = new CurrentVersionInfosContainer(mergedInfos);
+		var jsonText = JsonUtility.ToJson(container);
+
+		//string path = Path.Combine(Application.persistentDataPath, "");
+
+		File.WriteAllText(path, jsonText);
+	}
 
 }
