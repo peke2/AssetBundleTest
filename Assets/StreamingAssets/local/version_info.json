@@ -1,0 +1,10 @@
+{
+	"version":1,
+	"infos":[
+		{"name":"res0", "size":1, "md5":"1234567890", "version":1},
+		{"name":"res1", "size":2, "md5":"1234567890", "version":1},
+		{"name":"res2", "size":3, "md5":"1234567890", "version":3},
+		{"name":"res3", "size":4, "md5":"1234567890", "version":1},
+		{"name":"res4", "size":5, "md5":"1234567890", "version":1}
+	]
+}

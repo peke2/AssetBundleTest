@@ -45,6 +45,9 @@ public class ABVersionManager : MonoBehaviour {
 		}
 	}
 
+	const string VERSION_INFO_FILE_NAME = "version_info.json";
+	const string REMOTE_RESOURCE_URL = "http://127.0.0.1:24080/remote/";
+
 
 	void Awake()
 	{
@@ -89,8 +92,9 @@ public class ABVersionManager : MonoBehaviour {
 		{
 			string key = info.name;
 			//	バージョンが上の情報を残す
+			//	バージョンが同じ場合ローカルを優先させて残す(余計な取得を無くす)
 			bool contains = mergedVersionInfos.ContainsKey(key);
-			if (!contains || (info.version > mergedVersionInfos[key].info.version))
+			if (!contains || (info.version > mergedVersionInfos[key].info.version) || (type==MergedInfo.ResourceType.LOCAL && info.version==mergedVersionInfos[key].info.version))
 			{
 				mergedVersionInfos[key] = new MergedInfo(info, type);
 			}
@@ -113,6 +117,13 @@ public class ABVersionManager : MonoBehaviour {
 	//リモートにのみ項目がある
 
 
+	string combineUrl(string baseStr, string relativeStr)
+	{
+		Uri baseUri = new Uri(baseStr);
+		Uri uri = new Uri(baseUri, relativeStr);
+		return uri.AbsoluteUri;
+	}
+
 	ABVersionInfo remoteVersionInfos;
 	ABVersionInfo localVersionInfos;
 	IEnumerator readVersionInfos()
@@ -120,13 +131,13 @@ public class ABVersionManager : MonoBehaviour {
 		remoteVersionInfos = null;
 		localVersionInfos = null;
 
-		yield return readVersionInfosFromRemote("http://127.0.0.1:24080/info.json");
-		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, "info.json"));
+		yield return readVersionInfosFromRemote( combineUrl(REMOTE_RESOURCE_URL, VERSION_INFO_FILE_NAME));
+		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, Path.Combine("local", VERSION_INFO_FILE_NAME)) );
 
 		addInfos(remoteVersionInfos.infos, MergedInfo.ResourceType.REMOTE);
 		addInfos(localVersionInfos.infos, MergedInfo.ResourceType.LOCAL);
 
-		yield return updateAssetBundles();
+		yield return updateAssetBundles(REMOTE_RESOURCE_URL);
 	}
 
 
@@ -172,22 +183,40 @@ public class ABVersionManager : MonoBehaviour {
 	}
 
 
-	IEnumerator updateAssetBundles()
+	IEnumerator updateAssetBundles(string remoteUrl)
 	{
 		string path = Path.Combine(Application.persistentDataPath, "current_version_infos.json");
 
 		Dictionary<string, MergedInfo> currentMergedInfo = readCurrentVersionInfos(path);
 
-		Dictionary<string, MergedInfo> updateTarget = retrieveUpdateTarget(mergedVersionInfos, currentMergedInfo);
+		Dictionary<string, MergedInfo> updateTargets = retrieveUpdateTarget(mergedVersionInfos, currentMergedInfo);
 
 		//	更新前に一度削除
 		deleteCurrentVersionInfos(path);
 
 		//アセットバンドルの更新
-		yield return null;
+		foreach(var key in updateTargets.Keys)
+		{
+			if(updateTargets[key].type == MergedInfo.ResourceType.LOCAL )
+			{
+				continue;
+			}
+
+			ABVersionInfo.Info info = updateTargets[key].info;
+			string uri = combineUrl(remoteUrl, info.name);
+			using (var request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET))
+			{
+				request.downloadHandler = new DownloadHandlerAssetBundle(path, info.version, 0);
+				yield return request.SendWebRequest();
+
+				Debug.Log("["+path+"] is downloaded");
+				//これでキャッシュには乗る？
+				//AssetBundle assetBundle = DownloadHandlerAssetBundle.GetContent(request);
+			}
+		}
 
 		//	更新後の情報で書き込み
-		writeCurrentVersionInfos(path, updateTarget);
+		writeCurrentVersionInfos(path, updateTargets);
 	}
 
 
@@ -200,9 +229,40 @@ public class ABVersionManager : MonoBehaviour {
 		}
 
 		//差分の抽出
-		//新規
-		//バージョンが上
-		return newInfos;	//仮でそのまま返す
+		//新規(new側にのみある)
+		//削除(current側にのみある) → Unity管理のキャッシュから削除する方法はある？
+		//新規(new)側のバージョンが上
+
+		var updatedInfos = new Dictionary<string, MergedInfo>();
+
+		//削除に関しては保留
+		foreach (var key in newInfos.Keys)
+		{
+			var newi = newInfos[key];
+
+			if ( newi.type == MergedInfo.ResourceType.LOCAL )
+			{
+				//	アップデート対象はリモートのみ
+				//	ローカルのバージョンが上の場合は無視
+				continue;
+			}
+
+			if ( !currentInfos.ContainsKey(key) )
+			{
+				//	新規
+				updatedInfos[key] = newi;
+				continue;
+			}
+
+			var curi = currentInfos[key];
+			if( newi.info.version > curi.info.version )
+			{
+				//	更新対象
+				updatedInfos[key] = newi;
+			}
+		}
+
+		return updatedInfos;
 	}
 
 

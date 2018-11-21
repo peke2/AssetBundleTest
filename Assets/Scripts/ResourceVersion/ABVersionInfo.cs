@@ -15,7 +15,7 @@ public class ABVersionInfo {
 	public class Info
 	{
 		public string name;
-		public uint fileSize;
+		public uint size;
 		public string md5;
 		public uint version;
 

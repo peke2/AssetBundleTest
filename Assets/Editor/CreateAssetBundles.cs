@@ -74,4 +74,51 @@ public class CreateAssetBundles
 		Debug.Log("[" + ((isSucceeded == true) ? "成功" : "失敗") + "]<-情報アセットバンドル作成結果");
 	}
 
+	[MenuItem("Assets/Build Version Test Asset")]
+	static void BuidVersionTestAsset()
+	{
+		string[] names = new string[] {
+			"res0",
+			"res1",
+			"res2",
+			"res3",
+			"res4",
+			"res5",
+		};
+
+		string inputPath = "Assets/Resources/Json";
+		string outputPath = "Assets/AssetBundles/json";
+
+		string[] paths = new string[]{
+			"local",
+			"remote",
+		};
+
+		foreach (var path in paths)
+		{
+			var buildMap = new List<AssetBundleBuild>();
+
+			foreach (var name in names)
+			{
+				var fileName = Path.Combine(Path.Combine(inputPath, path), name) + ".json";
+				if ( !File.Exists(fileName) )
+				{
+					Debug.Log("スキップ[" + fileName + "]");
+					continue;
+				}
+
+				var build = new AssetBundleBuild();
+				build.assetNames = new string[] { fileName };
+				build.assetBundleName = name;
+				buildMap.Add(build);
+			}
+
+			if (buildMap.Count == 0) continue;
+
+			string op = Path.Combine(outputPath, path);
+			prepareOutputDirectory(op);
+
+			BuildPipeline.BuildAssetBundles(op, buildMap.ToArray(), BuildAssetBundleOptions.UncompressedAssetBundle, BuildTarget.StandaloneWindows);
+		}
+	}
 }
