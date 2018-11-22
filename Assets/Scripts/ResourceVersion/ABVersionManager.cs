@@ -41,15 +41,9 @@ public class ABVersionManager : MonoBehaviour {
 	/// バージョン情報を取得
 	/// </summary>
 	/// <returns></returns>
-	public Info[] getVersionInfos()
+	public Dictionary<string, Info> getVersionInfos()
 	{
-		Info[] infos = new Info[mergedVersionInfos.Count];
-		int count = 0;
-		foreach (var v in mergedVersionInfos.Values)
-		{
-			infos[count++] = v;
-		}
-		return infos;
+		return new Dictionary<string, Info>(mergedVersionInfos);
 	}
 
 #if false

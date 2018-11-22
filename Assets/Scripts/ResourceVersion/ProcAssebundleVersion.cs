@@ -23,10 +23,11 @@ public class ProcAssebundleVersion : MonoBehaviour {
 		if( !isReady && manager.isVersionInfosReady() )
 		{
 			Debug.Log("バージョン情報読み込み完了");
-			ABVersionManager.Info[] infos = manager.getVersionInfos();
-			foreach(var info in infos)
+			Dictionary<string, ABVersionManager.Info> infos = manager.getVersionInfos();
+			foreach(var key in infos.Keys)
 			{
-				Debug.Log("ファイル名["+info.element.name+"] Ver."+info.element.version+"("+info.type.ToString()+")");
+				var info = infos[key];
+				Debug.Log("key=("+key+") ファイル名["+info.element.name+"] Ver."+info.element.version+"("+info.type.ToString()+")");
 			}
 			isReady = true;
 		}
