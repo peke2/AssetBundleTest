@@ -24,7 +24,7 @@ public class ABVersionManager : MonoBehaviour {
 		}
 	}
 
-
+	//	マージ済みのバージョン情報
 	Dictionary<string, Info> mergedVersionInfos = new Dictionary<string, Info>();
 	bool isReady = false;
 
@@ -37,6 +37,10 @@ public class ABVersionManager : MonoBehaviour {
 		return isReady;
 	}
 
+	/// <summary>
+	/// バージョン情報を取得
+	/// </summary>
+	/// <returns></returns>
 	public Info[] getVersionInfos()
 	{
 		Info[] infos = new Info[mergedVersionInfos.Count];
@@ -48,7 +52,7 @@ public class ABVersionManager : MonoBehaviour {
 		return infos;
 	}
 
-
+#if false
 	[Serializable]
 	public class CurrentVersionInfosContainer
 	{
@@ -66,9 +70,14 @@ public class ABVersionManager : MonoBehaviour {
 			}
 		}
 	}
+#endif
 
 	const string VERSION_INFO_FILE_NAME = "version_info.json";
-	const string REMOTE_RESOURCE_URL = "http://127.0.0.1:24080/remote/";
+	//const string REMOTE_RESOURCE_URL = "http://127.0.0.1:24080/remote/";
+	//public string RemoteRsourceUrl
+	//{
+	//	get; set;
+	//}
 
 
 	void Awake()
@@ -94,45 +103,49 @@ public class ABVersionManager : MonoBehaviour {
 
 	void Start()
 	{
-		initVersionInfos();
 	}
 
-	void initVersionInfos()
-	{
-		isReady = false;
-		StartCoroutine(readVersionInfos());
-	}
+	//void initVersionInfos(string remoteUrl=null)
+	//{
+	//	StartCoroutine(readVersionInfos());
+	//}
 
 
 
 	/// <summary>
 	/// ファイルバージョン情報を追加
 	/// </summary>
-	/// <param name="infos">ファイル情報の配列</param>		
-	public void addInfos(ABVersionInfo.Element[] infos, Info.ResourceType type)
+	/// <param name="elements">ファイル情報の配列</param>		
+	public void addInfos(ABVersionInfo info, Info.ResourceType type)
 	{
-		if(infos == null)
+		if( info == null )
 		{
 			return;
 		}
 
-		foreach (ABVersionInfo.Element info in infos)
+		ABVersionInfo.Element[] elements = info.elements;
+		if ( elements == null )
 		{
-			string key = info.name;
+			return;
+		}
+
+		foreach (var element in elements)
+		{
+			string key = element.name;
 			//	バージョンが上の情報を残す
 			//	バージョンが同じ場合ローカルを優先させて残す(余計な取得を無くす)
 			bool contains = mergedVersionInfos.ContainsKey(key);
-			if (!contains || (info.version > mergedVersionInfos[key].element.version) || (type==Info.ResourceType.LOCAL && info.version==mergedVersionInfos[key].element.version))
+			if (!contains || (element.version > mergedVersionInfos[key].element.version) || (type==Info.ResourceType.LOCAL && element.version==mergedVersionInfos[key].element.version))
 			{
-				mergedVersionInfos[key] = new Info(info, type);
+				mergedVersionInfos[key] = new Info(element, type);
 			}
 		}
 	}
 
-	public Dictionary<string, Info> getFileVersionIfnos()
-	{
-		return mergedVersionInfos;
-	}
+	//public Dictionary<string, Info> getFileVersionIfnos()
+	//{
+	//	return mergedVersionInfos;
+	//}
 
 
 	//[マージ確認の項目]
@@ -154,16 +167,22 @@ public class ABVersionManager : MonoBehaviour {
 
 	ABVersionInfo remoteVersionInfos;
 	ABVersionInfo localVersionInfos;
-	IEnumerator readVersionInfos()
+	public IEnumerator readVersionInfos(string remoteUrl=null)
 	{
+		isReady = false;
+
 		remoteVersionInfos = null;
 		localVersionInfos = null;
 
-		yield return readVersionInfosFromRemote( combineUrl(REMOTE_RESOURCE_URL, VERSION_INFO_FILE_NAME));
+		//	リモートとローカルからバージョン情報ファイルを取得
+		if (remoteUrl != null)
+		{
+			yield return readVersionInfosFromRemote(combineUrl(remoteUrl, VERSION_INFO_FILE_NAME));
+		}
 		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, Path.Combine("local", VERSION_INFO_FILE_NAME)) );
 
-		addInfos(remoteVersionInfos.elements, Info.ResourceType.REMOTE);
-		addInfos(localVersionInfos.elements, Info.ResourceType.LOCAL);
+		addInfos(remoteVersionInfos, Info.ResourceType.REMOTE);
+		addInfos(localVersionInfos, Info.ResourceType.LOCAL);
 
 		//確認用でここに入れてみる
 		//yield return updateAssetBundles(REMOTE_RESOURCE_URL);
@@ -212,7 +231,8 @@ public class ABVersionManager : MonoBehaviour {
 		localVersionInfos = versionInfos;
 	}
 
-
+	//以下、対応は見送り
+#if false
 	IEnumerator updateAssetBundles(string remoteUrl)
 	{
 		string path = Path.Combine(Application.persistentDataPath, "current_version_infos.json");
@@ -349,5 +369,5 @@ public class ABVersionManager : MonoBehaviour {
 
 		File.WriteAllText(path, jsonText);
 	}
-
+#endif
 }
