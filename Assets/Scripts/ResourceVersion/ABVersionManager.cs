@@ -8,33 +8,55 @@ using System.IO;
 public class ABVersionManager : MonoBehaviour {
 
 	[Serializable]
-	public class MergedInfo{
+	public class Info{
 		public enum ResourceType{
 			LOCAL,
 			REMOTE,
 		}
 
-		public ABVersionInfo.Info info;
+		public ABVersionInfo.Element element;
 		public ResourceType type;
 
-		public MergedInfo(ABVersionInfo.Info info, ResourceType type)
+		public Info(ABVersionInfo.Element element, ResourceType type)
 		{
-			this.info = info;
+			this.element = element;
 			this.type = type;
 		}
 	}
 
 
-	Dictionary<string, MergedInfo> mergedVersionInfos = new Dictionary<string, MergedInfo>();
+	Dictionary<string, Info> mergedVersionInfos = new Dictionary<string, Info>();
+	bool isReady = false;
+
+	/// <summary>
+	/// バージョン管理情報が準備済みか？
+	/// </summary>
+	/// <returns>true 準備済み</returns>
+	public bool isVersionInfosReady()
+	{
+		return isReady;
+	}
+
+	public Info[] getVersionInfos()
+	{
+		Info[] infos = new Info[mergedVersionInfos.Count];
+		int count = 0;
+		foreach (var v in mergedVersionInfos.Values)
+		{
+			infos[count++] = v;
+		}
+		return infos;
+	}
+
 
 	[Serializable]
 	public class CurrentVersionInfosContainer
 	{
-		public MergedInfo[] infos;
+		public Info[] infos;
 
-		public CurrentVersionInfosContainer(Dictionary<string, MergedInfo> mergedInfos)
+		public CurrentVersionInfosContainer(Dictionary<string, Info> mergedInfos)
 		{
-			infos = new MergedInfo[mergedInfos.Count];
+			infos = new Info[mergedInfos.Count];
 
 			int count = 0;
 			foreach (var key in mergedInfos.Keys)
@@ -72,36 +94,42 @@ public class ABVersionManager : MonoBehaviour {
 
 	void Start()
 	{
-		//StartCoroutine(loadVersionInfosFromRemote("http://127.0.0.1:24080/info.json"));
+		initVersionInfos();
+	}
+
+	void initVersionInfos()
+	{
+		isReady = false;
 		StartCoroutine(readVersionInfos());
 	}
+
 
 
 	/// <summary>
 	/// ファイルバージョン情報を追加
 	/// </summary>
 	/// <param name="infos">ファイル情報の配列</param>		
-	public void addInfos(ABVersionInfo.Info[] infos, MergedInfo.ResourceType type)
+	public void addInfos(ABVersionInfo.Element[] infos, Info.ResourceType type)
 	{
 		if(infos == null)
 		{
 			return;
 		}
 
-		foreach (ABVersionInfo.Info info in infos)
+		foreach (ABVersionInfo.Element info in infos)
 		{
 			string key = info.name;
 			//	バージョンが上の情報を残す
 			//	バージョンが同じ場合ローカルを優先させて残す(余計な取得を無くす)
 			bool contains = mergedVersionInfos.ContainsKey(key);
-			if (!contains || (info.version > mergedVersionInfos[key].info.version) || (type==MergedInfo.ResourceType.LOCAL && info.version==mergedVersionInfos[key].info.version))
+			if (!contains || (info.version > mergedVersionInfos[key].element.version) || (type==Info.ResourceType.LOCAL && info.version==mergedVersionInfos[key].element.version))
 			{
-				mergedVersionInfos[key] = new MergedInfo(info, type);
+				mergedVersionInfos[key] = new Info(info, type);
 			}
 		}
 	}
 
-	public Dictionary<string, MergedInfo> getFileVersionIfnos()
+	public Dictionary<string, Info> getFileVersionIfnos()
 	{
 		return mergedVersionInfos;
 	}
@@ -134,10 +162,12 @@ public class ABVersionManager : MonoBehaviour {
 		yield return readVersionInfosFromRemote( combineUrl(REMOTE_RESOURCE_URL, VERSION_INFO_FILE_NAME));
 		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, Path.Combine("local", VERSION_INFO_FILE_NAME)) );
 
-		addInfos(remoteVersionInfos.infos, MergedInfo.ResourceType.REMOTE);
-		addInfos(localVersionInfos.infos, MergedInfo.ResourceType.LOCAL);
+		addInfos(remoteVersionInfos.elements, Info.ResourceType.REMOTE);
+		addInfos(localVersionInfos.elements, Info.ResourceType.LOCAL);
 
-		yield return updateAssetBundles(REMOTE_RESOURCE_URL);
+		//確認用でここに入れてみる
+		//yield return updateAssetBundles(REMOTE_RESOURCE_URL);
+		isReady = true;
 	}
 
 
@@ -155,7 +185,7 @@ public class ABVersionManager : MonoBehaviour {
 			var versionInfos = JsonUtility.FromJson<ABVersionInfo>(request.downloadHandler.text);
 			Debug.Log("リモートバージョン情報取得成功");
 			Debug.Log("ファイルバージョン["+versionInfos.version+"]");
-			foreach (var info in versionInfos.infos)
+			foreach (var info in versionInfos.elements)
 			{
 				Debug.Log(info.name+"["+info.version.ToString()+"]");
 			}
@@ -175,7 +205,7 @@ public class ABVersionManager : MonoBehaviour {
 		var versionInfos = JsonUtility.FromJson<ABVersionInfo>(text);
 		Debug.Log("ローカルバージョン情報取得成功");
 		Debug.Log("ファイルバージョン[" + versionInfos.version + "]");
-		foreach (var info in versionInfos.infos)
+		foreach (var info in versionInfos.elements)
 		{
 			Debug.Log(info.name + "[" + info.version.ToString() + "]");
 		}
@@ -187,9 +217,16 @@ public class ABVersionManager : MonoBehaviour {
 	{
 		string path = Path.Combine(Application.persistentDataPath, "current_version_infos.json");
 
-		Dictionary<string, MergedInfo> currentMergedInfo = readCurrentVersionInfos(path);
+		Dictionary<string, Info> currentMergedInfo = readCurrentVersionInfos(path);
 
-		Dictionary<string, MergedInfo> updateTargets = retrieveUpdateTarget(mergedVersionInfos, currentMergedInfo);
+		Dictionary<string, Info> updateTargets = retrieveUpdateTarget(mergedVersionInfos, currentMergedInfo);
+
+		//	更新が無ければ何もしない
+		if( updateTargets.Count == 0 )
+		{
+			Debug.Log("アセットバンドルの更新無し");
+			yield break;
+		}
 
 		//	更新前に一度削除
 		deleteCurrentVersionInfos(path);
@@ -197,12 +234,13 @@ public class ABVersionManager : MonoBehaviour {
 		//アセットバンドルの更新
 		foreach(var key in updateTargets.Keys)
 		{
-			if(updateTargets[key].type == MergedInfo.ResourceType.LOCAL )
+			if(updateTargets[key].type == Info.ResourceType.LOCAL )
 			{
 				continue;
 			}
 
-			ABVersionInfo.Info info = updateTargets[key].info;
+			//ストレージのキャッシュに乗せる
+			ABVersionInfo.Element info = updateTargets[key].element;
 			string uri = combineUrl(remoteUrl, info.name);
 			using (var request = new UnityWebRequest(uri, UnityWebRequest.kHttpVerbGET))
 			{
@@ -210,17 +248,18 @@ public class ABVersionManager : MonoBehaviour {
 				yield return request.SendWebRequest();
 
 				Debug.Log("["+path+"] is downloaded");
-				//これでキャッシュには乗る？
 				//AssetBundle assetBundle = DownloadHandlerAssetBundle.GetContent(request);
 			}
 		}
 
-		//	更新後の情報で書き込み
-		writeCurrentVersionInfos(path, updateTargets);
+		Debug.Log("アセットバンドルの更新完了");
+
+		//	マージ済みの情報を書き込む
+		writeCurrentVersionInfos(path, mergedVersionInfos);
 	}
 
 
-	Dictionary<string, MergedInfo> retrieveUpdateTarget(Dictionary<string, MergedInfo> newInfos, Dictionary<string, MergedInfo> currentInfos)
+	Dictionary<string, Info> retrieveUpdateTarget(Dictionary<string, Info> newInfos, Dictionary<string, Info> currentInfos)
 	{
 		//	現在の情報が無ければ新規をそのまま使う
 		if( currentInfos == null )
@@ -233,14 +272,14 @@ public class ABVersionManager : MonoBehaviour {
 		//削除(current側にのみある) → Unity管理のキャッシュから削除する方法はある？
 		//新規(new)側のバージョンが上
 
-		var updatedInfos = new Dictionary<string, MergedInfo>();
+		var updatedInfos = new Dictionary<string, Info>();
 
 		//削除に関しては保留
 		foreach (var key in newInfos.Keys)
 		{
 			var newi = newInfos[key];
 
-			if ( newi.type == MergedInfo.ResourceType.LOCAL )
+			if ( newi.type == Info.ResourceType.LOCAL )
 			{
 				//	アップデート対象はリモートのみ
 				//	ローカルのバージョンが上の場合は無視
@@ -255,7 +294,7 @@ public class ABVersionManager : MonoBehaviour {
 			}
 
 			var curi = currentInfos[key];
-			if( newi.info.version > curi.info.version )
+			if( newi.element.version > curi.element.version )
 			{
 				//	更新対象
 				updatedInfos[key] = newi;
@@ -279,7 +318,7 @@ public class ABVersionManager : MonoBehaviour {
 	/// <summary>
 	/// 現在(読み込み済み)のバージョン情報を書き込み
 	/// </summary>
-	Dictionary<string, MergedInfo> readCurrentVersionInfos(string path)
+	Dictionary<string, Info> readCurrentVersionInfos(string path)
 	{
 		if( !File.Exists(path))
 		{
@@ -290,10 +329,10 @@ public class ABVersionManager : MonoBehaviour {
 		var jsonText = File.ReadAllText(path);
 		var container = JsonUtility.FromJson<CurrentVersionInfosContainer>(jsonText);
 
-		var mergedInfos = new Dictionary<string, MergedInfo>();
+		var mergedInfos = new Dictionary<string, Info>();
 		foreach(var info in container.infos)
 		{
-			mergedInfos[info.info.name] = info;
+			mergedInfos[info.element.name] = info;
 		}
 		return mergedInfos;
 	}
@@ -301,7 +340,7 @@ public class ABVersionManager : MonoBehaviour {
 	/// <summary>
 	/// 現在(読み込み済み)のバージョン情報を書き込み
 	/// </summary>
-	void writeCurrentVersionInfos(string path, Dictionary<string, MergedInfo> mergedInfos)
+	void writeCurrentVersionInfos(string path, Dictionary<string, Info> mergedInfos)
 	{
 		var container = new CurrentVersionInfosContainer(mergedInfos);
 		var jsonText = JsonUtility.ToJson(container);

@@ -12,7 +12,7 @@ public class ABVersionInfo {
 	}
 
 	[Serializable]
-	public class Info
+	public class Element
 	{
 		public string name;
 		public uint size;
@@ -23,7 +23,7 @@ public class ABVersionInfo {
 	}
 
 	public uint version;
-	public Info[] infos;
+	public Element[] elements;
 
 	public ABVersionInfo()
 	{
