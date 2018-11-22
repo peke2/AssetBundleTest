@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using System.IO;
 
 //	アセットバンドルバージョン管理の動作を確認するための呼び出しコンポーネント
 
@@ -14,7 +14,7 @@ public class ProcAssebundleVersion : MonoBehaviour {
 	void Start () {
 		manager = GetComponent<ABVersionManager>();
 
-		StartCoroutine( manager.readVersionInfos("http://127.0.0.1:24080/remote/") );
+		StartCoroutine( manager.readVersionInfos(Path.Combine(Application.streamingAssetsPath, "local"),"http://127.0.0.1:24080/remote/") );
 	}
 	
 	// Update is called once per frame

@@ -67,11 +67,6 @@ public class ABVersionManager : MonoBehaviour {
 #endif
 
 	const string VERSION_INFO_FILE_NAME = "version_info.json";
-	//const string REMOTE_RESOURCE_URL = "http://127.0.0.1:24080/remote/";
-	//public string RemoteRsourceUrl
-	//{
-	//	get; set;
-	//}
 
 
 	void Awake()
@@ -97,13 +92,11 @@ public class ABVersionManager : MonoBehaviour {
 
 	void Start()
 	{
+#if DEBUG_ENABLE_AUTO_VERSION_READ
+		StartCoroutine(readVersionInfos(Path.Combine(Application.streamingAssetsPath, "ab/android"), "http://127.0.0.1:24080/ab/android/"));
+#endif
 	}
-
-	//void initVersionInfos(string remoteUrl=null)
-	//{
-	//	StartCoroutine(readVersionInfos());
-	//}
-
+		
 
 
 	/// <summary>
@@ -154,14 +147,17 @@ public class ABVersionManager : MonoBehaviour {
 
 	string combineUrl(string baseStr, string relativeStr)
 	{
-		Uri baseUri = new Uri(baseStr);
-		Uri uri = new Uri(baseUri, relativeStr);
-		return uri.AbsoluteUri;
+		if( !baseStr.EndsWith("/") )
+		{
+			baseStr += "/"; 
+		}
+		//	区切り文字列はファイルのパスと違って固定なので文字列の連結だけにしておく
+		return baseStr + relativeStr;
 	}
 
 	ABVersionInfo remoteVersionInfos;
 	ABVersionInfo localVersionInfos;
-	public IEnumerator readVersionInfos(string remoteUrl=null)
+	public IEnumerator readVersionInfos(string localPath=null, string remoteUrl=null)
 	{
 		isReady = false;
 
@@ -173,7 +169,10 @@ public class ABVersionManager : MonoBehaviour {
 		{
 			yield return readVersionInfosFromRemote(combineUrl(remoteUrl, VERSION_INFO_FILE_NAME));
 		}
-		readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, Path.Combine("local", VERSION_INFO_FILE_NAME)) );
+		if (localPath != null)
+		{
+			readVersionInfosFromLocal(Path.Combine(Application.streamingAssetsPath, Path.Combine(localPath, VERSION_INFO_FILE_NAME)));
+		}
 
 		addInfos(remoteVersionInfos, Info.ResourceType.REMOTE);
 		addInfos(localVersionInfos, Info.ResourceType.LOCAL);
@@ -197,11 +196,13 @@ public class ABVersionManager : MonoBehaviour {
 		{
 			var versionInfos = JsonUtility.FromJson<ABVersionInfo>(request.downloadHandler.text);
 			Debug.Log("リモートバージョン情報取得成功");
+#if DEBUG_OUTPUT_VERSION_FILE_INFO
 			Debug.Log("ファイルバージョン["+versionInfos.version+"]");
 			foreach (var info in versionInfos.elements)
 			{
 				Debug.Log(info.name+"["+info.version.ToString()+"]");
 			}
+#endif
 			remoteVersionInfos = versionInfos;
 		}
 	}
@@ -217,11 +218,13 @@ public class ABVersionManager : MonoBehaviour {
 
 		var versionInfos = JsonUtility.FromJson<ABVersionInfo>(text);
 		Debug.Log("ローカルバージョン情報取得成功");
+#if DEBUG_OUTPUT_VERSION_FILE_INFO
 		Debug.Log("ファイルバージョン[" + versionInfos.version + "]");
 		foreach (var info in versionInfos.elements)
 		{
 			Debug.Log(info.name + "[" + info.version.ToString() + "]");
 		}
+#endif
 		localVersionInfos = versionInfos;
 	}
 
