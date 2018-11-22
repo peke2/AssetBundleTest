@@ -68,6 +68,9 @@
     <Compile Include="Assets\Scripts\ResourceVersion\ABVersionManager.cs" />
     <None Include="Assets\Resources\Text\info.txt" />
     <None Include="Assets\Resources\Text\document.txt" />
+    <Reference Include="UnityEditor.StandardEvents">
+      <HintPath>E:/develop/languages/unity/work/UnityAssetBundleTest/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.TextMeshPro.Editor">
       <HintPath>E:/develop/languages/unity/work/UnityAssetBundleTest/Library/ScriptAssemblies/Unity.TextMeshPro.Editor.dll</HintPath>
     </Reference>
