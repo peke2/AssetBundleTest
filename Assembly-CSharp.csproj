@@ -61,6 +61,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scenes\LoadTest\LoadFromFileTest.cs" />
+    <Compile Include="Assets\Scenes\LoadTexture\TextureLoader.cs" />
     <Compile Include="Assets\Scenes\Text\InfoBase.cs" />
     <Compile Include="Assets\Scenes\Text\PrepareAssets.cs" />
     <Compile Include="Assets\Scenes\UI\Loader.cs" />
@@ -68,7 +70,9 @@
     <Compile Include="Assets\Scripts\ResourceVersion\ABVersionManager.cs" />
     <Compile Include="Assets\Scripts\ResourceVersion\ProcAssebundleVersion.cs" />
     <None Include="Assets\Resources\Text\info.txt" />
+    <None Include="Assets\StreamingAssets\temp\結果.txt" />
     <None Include="Assets\Resources\Text\document.txt" />
+    <None Include="Assets\Scenes\Text\temp.txt" />
     <Reference Include="UnityEditor.StandardEvents">
       <HintPath>E:/develop/languages/unity/work/UnityAssetBundleTest/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
     </Reference>
